@@ -2,12 +2,14 @@
 
 namespace Mabrouk\Mediable\Traits;
 
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+
 Trait MediaModelsTrait
 {
 
     ## Relations
 
-    public function mediable()
+    public function mediable(): MorphTo
     {
         return $this->morphTo();
     }
@@ -38,9 +40,9 @@ Trait MediaModelsTrait
 
     ## Query Scope Methods
 
-    public function scopeMain($query, bool $main = true)
+    public function scopeMain($query, bool $isMain = true)
     {
-        return $query->where('is_main', $main);
+        return $query->where('is_main', $isMain);
     }
 
     public function scopeOfType($query, string $type = '')
@@ -56,7 +58,7 @@ Trait MediaModelsTrait
         return $type == '' ? $query : $query->where('type', $type);
     }
 
-    public function scopeOfGroup($query, $group = '')
+    public function scopeOfGroup($query, string $group = '')
     {
         return $group != '' ? $query->where('media_group_name', $group) : $query;
     }

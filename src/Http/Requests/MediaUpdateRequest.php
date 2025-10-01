@@ -18,7 +18,7 @@ class MediaUpdateRequest extends FormRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return true;
     }
@@ -28,12 +28,12 @@ class MediaUpdateRequest extends FormRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         $this->medium = \gettype($this->medium) == 'object' ? $this->medium : Media::findOrFail($this->medium);
         $this->type = $this->medium->type;
         $this->model = $this->medium->mediable;
-        if (! $this->medium->mediable) {
+        if (!$this->medium->mediable) {
             throw new ModelNotFoundException;
         }
 
@@ -52,7 +52,7 @@ class MediaUpdateRequest extends FormRequest
         return $rules;
     }
 
-    public function updateMadia()
+    public function updateMedia(): Media
     {
         $configPath = 'media.' . Str::plural($this->type) . '.path';
         $mediaDirectory = Str::plural($this->type) . 'Directory';
@@ -74,6 +74,7 @@ class MediaUpdateRequest extends FormRequest
                 );
                 break;
         }
+
         return $this->medium->refresh();
     }
 }

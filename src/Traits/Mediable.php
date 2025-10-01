@@ -5,6 +5,8 @@ namespace Mabrouk\Mediable\Traits;
 use Carbon\Carbon;
 use ReflectionClass;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Mabrouk\Mediable\Models\Media;
 use Mabrouk\Mediable\Models\MediaMeta;
 
@@ -12,7 +14,7 @@ Trait Mediable
 {
     ## Relations
 
-	public function media($type = null, $title = null)
+	public function media(?string $type = null, ?string $title = null): MorphMany
     {
         return $this->morphMany(Media::class, 'mediable')
             ->orderBy('priority', 'asc')
@@ -37,7 +39,7 @@ Trait Mediable
             ]);
     }
 
-	public function singleMedia($type = null)
+	public function singleMedia(?string $type = null): MorphOne
     {
         return $this->morphOne(Media::class, 'mediable')
             ->when($type, function ($query) use ($type) {
@@ -151,16 +153,16 @@ Trait Mediable
 
     ## Other Methods
 
-    public function addMedia(
-        string $type,
-        string $path,
-        string $title = null,
-        string $description = null,
-        bool $isMain = false,
-        int $priority = 9999,
-        int $fileSize = null,
-        string $extension = ''
-    ) {
+	public function addMedia(
+		string $type,
+		string $path,
+		?string $title = null,
+		?string $description = null,
+		bool $isMain = false,
+		int $priority = 9999,
+		?int $fileSize = null,
+		string $extension = ''
+	) : self {
         ! $isMain ? : $this->normalizePreviousMainMedia();
 
         $this->media()->create([
@@ -175,20 +177,21 @@ Trait Mediable
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ]);
-        $this->touch;
+        $this->touch();
+
         return $this;
     }
 
-    public function editMedia(
-        Media $singleMedia,
-        string $path = null,
-        string $title = null,
-        string $description = null,
-        bool $isMain = false,
-        int $priority = 9999,
-        int $fileSize = null,
-        string $extension = ''
-    ) {
+	public function editMedia(
+		Media $singleMedia,
+		?string $path = null,
+		?string $title = null,
+		?string $description = null,
+		bool $isMain = false,
+		int $priority = 9999,
+		?int $fileSize = null,
+		string $extension = ''
+	): void {
         $oldPath = $path == null ?: $singleMedia->path;
         $singleMedia->is_main || (!$singleMedia->is_main && !$isMain) ? : $this->normalizePreviousMainMedia();
 
@@ -204,43 +207,42 @@ Trait Mediable
             'updated_at' => Carbon::now(),
         ]);
 
-        $this->touch;
+        $this->touch();
     }
 
-    public function replaceMedia(
-        Media $singleMedia,
-        string $path,
-        string $title = null,
-        string $description = null,
-        bool $isMain = false,
-        int $fileSize = null,
-        string $extension = ''
-    ) {
+	public function replaceMedia(
+		Media $singleMedia,
+		string $path,
+		?string $title = null,
+		?string $description = null,
+		bool $isMain = false,
+		?int $fileSize = null,
+		string $extension = ''
+	) : void {
         $this->editMedia($singleMedia, $path, $title, $description, $isMain, $fileSize, $extension);
-        $this->touch;
+        $this->touch();
     }
 
-    public function deleteMedia(Media $singleMedia)
+    public function deleteMedia(Media $singleMedia): void
     {
         $singleMedia->remove();
-        $this->touch;
+        $this->touch();
     }
 
-    public function deleteAllMedia()
+    public function deleteAllMedia(): void
     {
         $this->media->each(function ($singleMedia) {
             $this->deleteMedia($singleMedia);
         });
     }
 
-    protected function normalizePreviousMainMedia()
+    protected function normalizePreviousMainMedia(): void
     {
-        if ((bool) optional($this->mainMedia)->is_main) {
+        if (optional($this->mainMedia)->is_main) {
             $this->mainMedia->update([
                 'is_main' => false
             ]);
         }
-        return;
     }
 
     public function updateOrCreateMediaMeta(Media $media)

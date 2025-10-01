@@ -3,18 +3,17 @@
 namespace Mabrouk\Mediable\Traits;
 
 use Carbon\Carbon;
-use Mabrouk\Mediable\Traits\Mediable;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Mabrouk\Mediable\Models\TranslatedMedia;
 
 Trait HasTranslatedMedia
 {
     use Mediable;
 
-    public $isHasTranslatedMedia = true;
-
     ## Relations
 
-	public function media($type = null, $title = null, $relatedObjectMediaGroupName = null)
+	public function media(?string $type = null, ?string $title = null, ?string $relatedObjectMediaGroupName = null): MorphMany
     {
         return $this->morphMany(TranslatedMedia::class, 'mediable')
             ->orderBy('translated_media.priority', 'asc')
@@ -42,7 +41,7 @@ Trait HasTranslatedMedia
             ]);
     }
 
-	public function singleMedia($type = null)
+	public function singleMedia(?string $type = null): MorphOne
     {
         return $this->morphOne(TranslatedMedia::class, 'mediable')
             ->when($type, function ($query) use ($type) {
@@ -71,7 +70,7 @@ Trait HasTranslatedMedia
 
     ## Other Methods
 
-    public function addMedia(string $type, string $path, string $title = null, string $description = null, bool $isMain = false, string $extension = '', string $mediaGroupName = '', int $priority = 9999, int $fileSize = null)
+	public function addMedia(string $type, string $path, ?string $title = null, ?string $description = null, bool $isMain = false, string $extension = '', string $mediaGroupName = '', int $priority = 9999, ?int $fileSize = null)
     {
         ! $isMain ? : $this->normalizePreviousMainMedia();
 
@@ -97,7 +96,7 @@ Trait HasTranslatedMedia
     }
 
     // ! should handle translation here
-    public function editMedia(TranslatedMedia $singleMedia, string $path = null, string $title = null, string $description = null, bool $isMain = false, string $extension = '', string $mediaGroupName = '', int $priority = 9999, int $fileSize = null)
+	public function editMedia(TranslatedMedia $singleMedia, ?string $path = null, ?string $title = null, ?string $description = null, bool $isMain = false, string $extension = '', string $mediaGroupName = '', int $priority = 9999, ?int $fileSize = null)
     {
         $oldPath = $path == null ?: $singleMedia->path;
         $singleMedia->is_main || (!$singleMedia->is_main && !$isMain) ? : $this->normalizePreviousMainMedia();
