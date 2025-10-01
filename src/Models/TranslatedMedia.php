@@ -58,12 +58,15 @@ class TranslatedMedia extends Model
         return TranslatedMediaFactory::new();
     }
 
-    public function remove($removeFileWithoutObject = false)
+    public function remove($removeFileWithoutObject = false): self
     {
         Storage::delete($this->storagePath);
-        if ($removeFileWithoutObject) return $this;
-        $this->deleteTranslations();
-        $this->delete();
+
+        if (!$removeFileWithoutObject) {
+            $this->deleteTranslations();
+            $this->delete();
+        }
+
         return $this;
     }
 }

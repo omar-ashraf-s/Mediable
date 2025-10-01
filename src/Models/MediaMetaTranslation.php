@@ -3,6 +3,7 @@
 namespace Mabrouk\Mediable\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MediaMetaTranslation extends Model
 {
@@ -17,7 +18,7 @@ class MediaMetaTranslation extends Model
 
     ## Relations
 
-    public function mediaMeta()
+    public function mediaMeta(): BelongsTo
     {
         return $this->belongsTo(MediaMeta::class);
     }
