@@ -20,21 +20,7 @@ Trait Mediable
                 $query->ofType($type);
             })->when($title, function ($query) use ($title) {
                 $query->byTitle($title);
-            })->select([
-                'id',
-                'mediable_type',
-                'mediable_id',
-                'type',
-                'extension',
-                'path',
-                'title',
-                'description',
-                'priority',
-                'size',
-                'is_main',
-                'created_at',
-                'updated_at',
-            ]);
+            });
     }
 
 	public function singleMedia($type = null)
@@ -42,20 +28,7 @@ Trait Mediable
         return $this->morphOne(Media::class, 'mediable')
             ->when($type, function ($query) use ($type) {
                 $query->ofType($type);
-            })->select([
-                'id',
-                'mediable_type',
-                'mediable_id',
-                'type',
-                'extension',
-                'path',
-                'title',
-                'description',
-                'size',
-                'is_main',
-                'created_at',
-                'updated_at',
-            ]);
+            });
     }
 
     ## Getters & Setters
@@ -204,19 +177,6 @@ Trait Mediable
             'updated_at' => Carbon::now(),
         ]);
 
-        $this->touch;
-    }
-
-    public function replaceMedia(
-        Media $singleMedia,
-        string $path,
-        string $title = null,
-        string $description = null,
-        bool $isMain = false,
-        int $fileSize = null,
-        string $extension = ''
-    ) {
-        $this->editMedia($singleMedia, $path, $title, $description, $isMain, $fileSize, $extension);
         $this->touch;
     }
 
