@@ -3,34 +3,31 @@
 namespace Mabrouk\Mediable\Traits;
 
 use Carbon\Carbon;
-use ReflectionClass;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Mabrouk\Mediable\Models\Media;
 use Mabrouk\Mediable\Models\MediaMeta;
+use ReflectionClass;
 
 Trait Mediable
 {
     ## Relations
 
-	public function media($type = null, $title = null)
+	public function media()
     {
-        return $this->morphMany(Media::class, 'mediable')
-            ->orderBy('priority', 'asc')
-            ->when($type, function ($query) use ($type) {
-                $query->ofType($type);
-            })->when($title, function ($query) use ($title) {
-                $query->byTitle($title);
-            });
+        return $this->morphMany(Media::class, 'mediable')->orderBy('priority', 'asc');
     }
 
-	public function singleMedia($type = null)
+	public function singleMedia()
     {
-        return $this->morphOne(Media::class, 'mediable')
-            ->when($type, function ($query) use ($type) {
-                $query->ofType($type);
-            });
+        return $this->morphOne(Media::class, 'mediable');
     }
 
+	public function nonMainMedia()
+    {
+        return $this->media()->where('is_main', false);
+    }
+    
     ## Getters & Setters
 
     public function getMediaDirectoryAttribute($value)
@@ -125,41 +122,42 @@ Trait Mediable
     ## Other Methods
 
     public function addMedia(
-        string $type,
-        string $path,
-        string $title = null,
-        string $description = null,
+        UploadedFile $requestFile,
+        string $type = 'photo',
+        ?string $disk = null,
+        ?string $title = null,
+        ?string $description = null,
         bool $isMain = false,
         int $priority = 9999,
-        int $fileSize = null,
-        string $extension = ''
     ) {
-        ! $isMain ? : $this->normalizePreviousMainMedia();
+        if ($isMain) {
+            $this->normalizePreviousMainMedia();
+        }
+
+        $handledFile = $this->storeRequestFile($requestFile, $disk);
 
         $this->media()->create([
-            'path' => $path,
+            'path' => $handledFile['path'],
             'type' => $type,
-            'extension' => $extension,
+            'extension' => $handledFile['extension'],
             'title' => $title,
             'description' => $description,
-            'is_main' => $isMain ? true : false,
+            'is_main' => $isMain,
             'priority' => $priority,
-            'size' => $fileSize,
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
+            'size' => $handledFile['size'],
         ]);
-        $this->touch;
+
         return $this;
     }
-
+    
     public function editMedia(
         Media $singleMedia,
-        string $path = null,
-        string $title = null,
-        string $description = null,
+        ?string $path = null,
+        ?string $title = null,
+        ?string $description = null,
         bool $isMain = false,
         int $priority = 9999,
-        int $fileSize = null,
+        ?int $fileSize = null,
         string $extension = ''
     ) {
         $oldPath = $path == null ?: $singleMedia->path;
@@ -193,18 +191,37 @@ Trait Mediable
         });
     }
 
-    protected function normalizePreviousMainMedia()
+    public function updateOrCreateMediaMeta(Media $media)
+    {
+        MediaMeta::updateOrCreate(['media_id' => $media->id]);
+    }
+
+    private function normalizePreviousMainMedia(): void
     {
         if ((bool) optional($this->mainMedia)->is_main) {
             $this->mainMedia->update([
                 'is_main' => false
             ]);
         }
-        return;
     }
-
-    public function updateOrCreateMediaMeta(Media $media)
+    
+    private function storeRequestFile(UploadedFile $requestFile, ?string $disk = null): array
     {
-        MediaMeta::updateOrCreate(['media_id' => $media->id]);
-    }
+        $extension = $requestFile->getClientOriginalExtension();
+        $name = now()->timestamp . '-' . random_int(100000, 999999);
+
+        $disk = $disk ?? config('filesystems.default');
+
+        $path = $requestFile->storeAs($this->photosDirectory, "{$name}.{$extension}", $disk);
+        
+        if (!$path) {
+            throw new \RuntimeException('Failed to store media file');
+        }
+        
+        return [
+            'path' => $path,
+            'size' => $requestFile->getSize(),
+            'extension' => $extension,
+        ];
+    }    
 }
