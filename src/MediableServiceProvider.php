@@ -32,8 +32,6 @@ class MediableServiceProvider extends ServiceProvider
     {
         require_once __DIR__ . '/Helpers/MediableHelperFunctions.php';
 
-        $this->registerRoutes();
-
         if ($this->app->runningInConsole()) {
             /**
              * Migrations
@@ -50,16 +48,20 @@ class MediableServiceProvider extends ServiceProvider
                 __DIR__ . '/config/mediable.php' => config_path('mediable.php'),
             ], 'mediable-config');
         }
+
+        if (config('mediable.load_routes')) {
+            $this->registerRoutes();
+        }
     }
 
-    protected function registerRoutes()
+    protected function registerRoutes(): void
     {
         Route::group($this->routeConfiguration(), function () {
             $this->loadRoutesFrom(__DIR__ . '/routes/mediable_routes.php');
         });
     }
 
-    protected function routeConfiguration()
+    protected function routeConfiguration(): array
     {
         return [
             'namespace' => 'Mabrouk\Mediable\Http\Controllers',
@@ -68,7 +70,7 @@ class MediableServiceProvider extends ServiceProvider
         ];
     }
 
-    protected function migrationFiles()
+    protected function migrationFiles(): array
     {
         $migrationFiles = [];
 
@@ -80,7 +82,7 @@ class MediableServiceProvider extends ServiceProvider
         return $migrationFiles;
     }
 
-    protected function migrationExists($migrationName)
+    protected function migrationExists($migrationName): bool
     {
         $path = database_path('migrations/');
         $files = \scandir($path);
@@ -90,5 +92,5 @@ class MediableServiceProvider extends ServiceProvider
             if ($pos !== false) return true;
         }
         return false;
-    }    
+    }
 }

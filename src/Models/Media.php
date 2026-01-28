@@ -67,12 +67,15 @@ class Media extends Model
         return MediaFactory::new();
     }
 
-    public function remove($removeFileWithoutObject = false)
+    public function remove(bool $removeFileWithoutObject = false): bool
     {
         Storage::delete($this->storagePath);
-        if ($removeFileWithoutObject) return $this;
-        $this->mediaMeta?->remove();
 
-        return $this->delete();
+        if (!$removeFileWithoutObject) {
+            $this->mediaMeta?->remove();
+            $this->delete();
+        }
+
+        return true;
     }
 }

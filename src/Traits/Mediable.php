@@ -4,6 +4,8 @@ namespace Mabrouk\Mediable\Traits;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Mabrouk\Mediable\Models\Media;
 use Mabrouk\Mediable\Models\MediaMeta;
 use ReflectionClass;
@@ -12,12 +14,12 @@ Trait Mediable
 {
     ## Relations
 
-	public function media()
+	public function media(): MorphMany
     {
         return $this->morphMany(Media::class, 'mediable')->orderBy('priority', 'asc');
     }
 
-	public function singleMedia()
+	public function singleMedia(): MorphOne
     {
         return $this->morphOne(Media::class, 'mediable');
     }
@@ -188,13 +190,13 @@ Trait Mediable
         ]);
     }
 
-    public function deleteMedia(Media $singleMedia)
+    public function deleteMedia(Media $singleMedia): void
     {
         $singleMedia->remove();
-        $this->touch;
+        $this->touch();
     }
 
-    public function deleteAllMedia()
+    public function deleteAllMedia(): void
     {
         $this->media->each(function ($singleMedia) {
             $this->deleteMedia($singleMedia);
@@ -208,7 +210,7 @@ Trait Mediable
 
     private function normalizePreviousMainMedia(): void
     {
-        if ((bool) optional($this->mainMedia)->is_main) {
+        if (optional($this->mainMedia)->is_main) {
             $this->mainMedia->update([
                 'is_main' => false
             ]);

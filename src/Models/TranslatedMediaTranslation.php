@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TranslatedMediaTranslation extends Model
 {
@@ -15,7 +16,7 @@ class TranslatedMediaTranslation extends Model
 
     ## Relations
 
-    public function translatedMedia()
+    public function translatedMedia(): BelongsTo
     {
         return $this->belongsTo(TranslatedMedia::class, 'translated_media_id');
     }

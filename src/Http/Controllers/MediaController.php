@@ -12,16 +12,17 @@ class MediaController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  Mabrouk\Mediable\Http\Requests\MediaUpdateRequest  $request
-     * @param  Mabrouk\Mediable\Models\Media  $medium
+     * @param MediaUpdateRequest $request
+     * @param Media $medium
      * @return \Illuminate\Http\Response
      */
     public function update(MediaUpdateRequest $request, Media $medium)
     {
-        $medium = $request->updateMadia();
+        $medium = $request->updateMedia();
+
         return response([
             'message' => __('One media file updated successfully'),
-            'media' => new MediaResource($medium->refresh()),
+            'media' => new MediaResource($medium),
         ]);
     }
 
@@ -34,15 +35,17 @@ class MediaController extends Controller
     public function destroy($medium)
     {
         $medium = Media::findOrFail($medium);
-        if (! $medium->mediable) {
+        if (!$medium->mediable) {
             optional($medium)->remove();
             throw new ModelNotFoundException;
         }
-        if ((bool) $medium->is_main) {
+
+        if ($medium->is_main) {
             return response([
                 'message' => __('You can\'t delete a main media file'),
             ], 422);
         }
+
         $medium->mediable->deleteMedia($medium);
         return response([
             'message' => __('One media file deleted successfully'),
