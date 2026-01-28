@@ -2,7 +2,6 @@
 
 namespace Mabrouk\Mediable\Traits;
 
-use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Mabrouk\Mediable\Models\Media;
@@ -125,17 +124,18 @@ Trait Mediable
         UploadedFile $requestFile,
         string $type = 'photo',
         ?string $disk = null,
+        bool $isMain = false,
         ?string $title = null,
         ?string $description = null,
-        bool $isMain = false,
         int $priority = 9999,
     ) {
-        if ($isMain) {
-            $this->normalizePreviousMainMedia();
-        }
 
         $handledFile = $this->storeRequestFile($requestFile, $disk);
 
+        if ($isMain) {
+            $this->normalizePreviousMainMedia();
+        }
+        
         $this->media()->create([
             'path' => $handledFile['path'],
             'type' => $type,
@@ -151,31 +151,41 @@ Trait Mediable
     }
     
     public function editMedia(
-        Media $singleMedia,
-        ?string $path = null,
+        UploadedFile $requestFile,
+        ?Media $singleMedia,
+        string $type = 'photo',
+        ?string $disk = null,
+        bool $isMain = false,        
         ?string $title = null,
         ?string $description = null,
-        bool $isMain = false,
         int $priority = 9999,
-        ?int $fileSize = null,
-        string $extension = ''
-    ) {
-        $oldPath = $path == null ?: $singleMedia->path;
-        $singleMedia->is_main || (!$singleMedia->is_main && !$isMain) ? : $this->normalizePreviousMainMedia();
+    ): void {
 
-        ! $oldPath ?: $singleMedia->remove(true);
+        if (!$singleMedia) {
+            $this->addMedia(
+                requestFile: $requestFile,
+                type: $type,
+                disk: $disk,
+                isMain: $isMain,
+                title: $title,
+                description: $description,
+                priority: $priority,
+            );
+
+            return;
+        }
+
+        $handledFile = $this->storeRequestFile($requestFile, $disk);
+        $singleMedia->remove(removeFileWithoutObject: true);
+
         $singleMedia->update([
-            'path' => $path ?? $singleMedia->path,
-            'extension' => $extension ?? $singleMedia->extension,
+            'path' => $handledFile['path'],
+            'extension' => $handledFile['extension'],
             'title' => $title ?? $singleMedia->title,
             'description' => $description ?? $singleMedia->description,
-            'is_main' => $isMain,
-            'priority' => $priority != $singleMedia->priority && $priority != 9999 ? $priority : $singleMedia->priority,
-            'size' => $fileSize,
-            'updated_at' => Carbon::now(),
+            'priority' => $priority ?? $singleMedia->priority,
+            'size' => $handledFile['size'],
         ]);
-
-        $this->touch;
     }
 
     public function deleteMedia(Media $singleMedia)
