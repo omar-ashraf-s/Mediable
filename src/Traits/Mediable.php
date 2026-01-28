@@ -2,64 +2,33 @@
 
 namespace Mabrouk\Mediable\Traits;
 
-use Carbon\Carbon;
-use ReflectionClass;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Mabrouk\Mediable\Models\Media;
 use Mabrouk\Mediable\Models\MediaMeta;
+use ReflectionClass;
 
 Trait Mediable
 {
     ## Relations
 
-	public function media(?string $type = null, ?string $title = null): MorphMany
+	public function media(): MorphMany
     {
-        return $this->morphMany(Media::class, 'mediable')
-            ->orderBy('priority', 'asc')
-            ->when($type, function ($query) use ($type) {
-                $query->ofType($type);
-            })->when($title, function ($query) use ($title) {
-                $query->byTitle($title);
-            })->select([
-                'id',
-                'mediable_type',
-                'mediable_id',
-                'type',
-                'extension',
-                'path',
-                'title',
-                'description',
-                'priority',
-                'size',
-                'is_main',
-                'created_at',
-                'updated_at',
-            ]);
+        return $this->morphMany(Media::class, 'mediable')->orderBy('priority', 'asc');
     }
 
-	public function singleMedia(?string $type = null): MorphOne
+	public function singleMedia(): MorphOne
     {
-        return $this->morphOne(Media::class, 'mediable')
-            ->when($type, function ($query) use ($type) {
-                $query->ofType($type);
-            })->select([
-                'id',
-                'mediable_type',
-                'mediable_id',
-                'type',
-                'extension',
-                'path',
-                'title',
-                'description',
-                'size',
-                'is_main',
-                'created_at',
-                'updated_at',
-            ]);
+        return $this->morphOne(Media::class, 'mediable');
     }
 
+	public function nonMainMedia()
+    {
+        return $this->media()->where('is_main', false);
+    }
+    
     ## Getters & Setters
 
     public function getMediaDirectoryAttribute($value)
@@ -153,74 +122,72 @@ Trait Mediable
 
     ## Other Methods
 
-	public function addMedia(
-		string $type,
-		string $path,
-		?string $title = null,
-		?string $description = null,
-		bool $isMain = false,
-		int $priority = 9999,
-		?int $fileSize = null,
-		string $extension = ''
-	) : self {
-        ! $isMain ? : $this->normalizePreviousMainMedia();
+    public function addMedia(
+        UploadedFile $requestFile,
+        string $type = 'photo',
+        ?string $disk = null,
+        bool $isMain = false,
+        ?string $title = null,
+        ?string $description = null,
+        int $priority = 9999,
+    ) {
 
+        $handledFile = $this->storeRequestFile($requestFile, $disk);
+
+        if ($isMain) {
+            $this->normalizePreviousMainMedia();
+        }
+        
         $this->media()->create([
-            'path' => $path,
+            'path' => $handledFile['path'],
             'type' => $type,
-            'extension' => $extension,
+            'extension' => $handledFile['extension'],
             'title' => $title,
             'description' => $description,
-            'is_main' => $isMain ? true : false,
+            'is_main' => $isMain,
             'priority' => $priority,
-            'size' => $fileSize,
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
+            'size' => $handledFile['size'],
         ]);
-        $this->touch();
 
         return $this;
     }
+    
+    public function editMedia(
+        UploadedFile $requestFile,
+        ?Media $singleMedia,
+        string $type = 'photo',
+        ?string $disk = null,
+        bool $isMain = false,        
+        ?string $title = null,
+        ?string $description = null,
+        int $priority = 9999,
+    ): void {
 
-	public function editMedia(
-		Media $singleMedia,
-		?string $path = null,
-		?string $title = null,
-		?string $description = null,
-		bool $isMain = false,
-		int $priority = 9999,
-		?int $fileSize = null,
-		string $extension = ''
-	): void {
-        $oldPath = $path == null ?: $singleMedia->path;
-        $singleMedia->is_main || (!$singleMedia->is_main && !$isMain) ? : $this->normalizePreviousMainMedia();
+        if (!$singleMedia) {
+            $this->addMedia(
+                requestFile: $requestFile,
+                type: $type,
+                disk: $disk,
+                isMain: $isMain,
+                title: $title,
+                description: $description,
+                priority: $priority,
+            );
 
-        ! $oldPath ?: $singleMedia->remove(true);
+            return;
+        }
+
+        $handledFile = $this->storeRequestFile($requestFile, $disk);
+        $singleMedia->remove(removeFileWithoutObject: true);
+
         $singleMedia->update([
-            'path' => $path ?? $singleMedia->path,
-            'extension' => $extension ?? $singleMedia->extension,
+            'path' => $handledFile['path'],
+            'extension' => $handledFile['extension'],
             'title' => $title ?? $singleMedia->title,
             'description' => $description ?? $singleMedia->description,
-            'is_main' => $isMain,
-            'priority' => $priority != $singleMedia->priority && $priority != 9999 ? $priority : $singleMedia->priority,
-            'size' => $fileSize,
-            'updated_at' => Carbon::now(),
+            'priority' => $priority ?? $singleMedia->priority,
+            'size' => $handledFile['size'],
         ]);
-
-        $this->touch();
-    }
-
-	public function replaceMedia(
-		Media $singleMedia,
-		string $path,
-		?string $title = null,
-		?string $description = null,
-		bool $isMain = false,
-		?int $fileSize = null,
-		string $extension = ''
-	) : void {
-        $this->editMedia($singleMedia, $path, $title, $description, $isMain, $fileSize, $extension);
-        $this->touch();
     }
 
     public function deleteMedia(Media $singleMedia): void
@@ -236,7 +203,12 @@ Trait Mediable
         });
     }
 
-    protected function normalizePreviousMainMedia(): void
+    public function updateOrCreateMediaMeta(Media $media)
+    {
+        MediaMeta::updateOrCreate(['media_id' => $media->id]);
+    }
+
+    private function normalizePreviousMainMedia(): void
     {
         if (optional($this->mainMedia)->is_main) {
             $this->mainMedia->update([
@@ -244,9 +216,24 @@ Trait Mediable
             ]);
         }
     }
-
-    public function updateOrCreateMediaMeta(Media $media)
+    
+    private function storeRequestFile(UploadedFile $requestFile, ?string $disk = null): array
     {
-        MediaMeta::updateOrCreate(['media_id' => $media->id]);
-    }
+        $extension = $requestFile->getClientOriginalExtension();
+        $name = now()->timestamp . '-' . random_int(100000, 999999);
+
+        $disk = $disk ?? config('filesystems.default');
+
+        $path = $requestFile->storeAs($this->photosDirectory, "{$name}.{$extension}", $disk);
+        
+        if (!$path) {
+            throw new \RuntimeException('Failed to store media file');
+        }
+        
+        return [
+            'path' => $path,
+            'size' => $requestFile->getSize(),
+            'extension' => $extension,
+        ];
+    }    
 }
