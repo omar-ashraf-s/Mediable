@@ -39,7 +39,7 @@ Trait HasTranslatedMedia
         ?string $description = null,
         int $priority = 9999,
     ) {
-        $handledFile = $this->storeRequestFile($requestFile, $disk);
+        $handledFile = $this->storeRequestFile(requestFile: $requestFile, type: $type, disk: $disk);
 
         if ($isMain) {
             $this->normalizePreviousMainMedia();
@@ -88,7 +88,7 @@ Trait HasTranslatedMedia
             return;
         }
 
-        $handledFile = $this->storeRequestFile($requestFile, $disk);
+        $handledFile = $this->storeRequestFile(requestFile: $requestFile, type: $type, disk: $disk);
         $singleMedia->remove(removeFileWithoutObject: true);
 
         $singleMedia->update([

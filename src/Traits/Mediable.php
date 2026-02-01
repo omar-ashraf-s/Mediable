@@ -65,55 +65,55 @@ Trait Mediable
 
     public function getPhotosAttribute()
     {
-        return $this->media()->where('type', 'photo')->get();
+        return $this->media->where('type', 'photo');
     }
 
     public function getPhotoAttribute()
     {
-        return $this->media()->where('type', 'photo')->first();
+        return $this->media->where('type', 'photo')->first();
     }
 
     public function getFilesAttribute()
     {
-        return $this->media()->where('type', 'file')->get();
+        return $this->media->where('type', 'file');
     }
 
     public function getFileAttribute()
     {
-        return $this->media()->where('type', 'file')->first();
+        return $this->media->where('type', 'file')->first();
     }
 
     public function getVoicesAttribute()
     {
-        return $this->media()->where('type', 'voice')->get();
+        return $this->media->where('type', 'voice');
     }
 
     public function getVoiceAttribute()
     {
-        return $this->media()->where('type', 'voice')->first();
+        return $this->media->where('type', 'voice')->first();
     }
 
     public function getVideosAttribute()
     {
-        return $this->media()->where('type', 'video')->get();
+        return $this->media->where('type', 'video');
     }
 
     public function getVideoAttribute()
     {
-        return $this->media()->where('type', 'video')->first();
+        return $this->media->where('type', 'video')->first();
     }
 
     public function getUrlsAttribute()
     {
-        return $this->media()->where('type', 'url')->get();
+        return $this->media->where('type', 'url');
     }
 
     public function getUrlAttribute()
     {
-        return $this->media()->where('type', 'url')->first();
+        return $this->media->where('type', 'url')->first();
     }
 
-    protected function getVideoIdAttribute($value)
+    protected function getVideoIdAttribute()
     {
         return getYoutubeVideoId($this->path);
     }
