@@ -130,7 +130,7 @@ Trait Mediable
         ?string $title = null,
         ?string $description = null,
         int $priority = 9999,
-    ) {
+    ): void {
 
         $handledFile = $this->storeRequestFile(requestFile: $requestFile, type: $type, disk: $disk);
 
@@ -148,8 +148,6 @@ Trait Mediable
             'priority' => $priority,
             'size' => $handledFile['size'],
         ]);
-
-        return $this;
     }
     
     public function editMedia(
