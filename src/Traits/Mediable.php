@@ -37,17 +37,17 @@ Trait Mediable
         return Str::plural(strtolower($className->getShortName()));
     }
 
-    public function getPhotosDirectoryAttribute($value)
+    public function getPhotosDirectoryAttribute()
     {
         return config('mediable.base_path') . config('mediable.photos.path') . "{$this->mediaDirectory}";
     }
 
-    public function getFilesDirectoryAttribute($value)
+    public function getFilesDirectoryAttribute()
     {
         return config('mediable.base_path') . config('mediable.files.path') . "{$this->mediaDirectory}";
     }
 
-    public function getVideosDirectoryAttribute($value)
+    public function getVideosDirectoryAttribute()
     {
         return config('mediable.base_path') . config('mediable.videos.path') . "{$this->mediaDirectory}";
     }
@@ -132,7 +132,7 @@ Trait Mediable
         int $priority = 9999,
     ) {
 
-        $handledFile = $this->storeRequestFile($requestFile, $disk);
+        $handledFile = $this->storeRequestFile(requestFile: $requestFile, type: $type, disk: $disk);
 
         if ($isMain) {
             $this->normalizePreviousMainMedia();
@@ -177,7 +177,7 @@ Trait Mediable
             return;
         }
 
-        $handledFile = $this->storeRequestFile($requestFile, $disk);
+        $handledFile = $this->storeRequestFile(requestFile: $requestFile, type: $type, disk: $disk);
         $singleMedia->remove(removeFileWithoutObject: true);
 
         $singleMedia->update([
@@ -217,14 +217,30 @@ Trait Mediable
         }
     }
     
-    private function storeRequestFile(UploadedFile $requestFile, ?string $disk = null): array
+    public function newMediaDirectory(string $type): string
+    {
+        switch ($type) {
+            case 'photo':
+                return $this->photosDirectory;
+            case 'file':
+                return $this->filesDirectory;
+            case 'video':
+                return $this->videosDirectory;
+            default:
+                return $this->photosDirectory;
+        }
+    }
+
+    private function storeRequestFile(UploadedFile $requestFile, string $type, ?string $disk = null): array
     {
         $extension = $requestFile->getClientOriginalExtension();
         $name = now()->timestamp . '-' . random_int(100000, 999999);
 
         $disk = $disk ?? config('filesystems.default');
+        
+        $directory = $this->newMediaDirectory(type: $type);
 
-        $path = $requestFile->storeAs($this->photosDirectory, "{$name}.{$extension}", $disk);
+        $path = $requestFile->storeAs($directory, "{$name}.{$extension}", $disk);
         
         if (!$path) {
             throw new \RuntimeException('Failed to store media file');
@@ -235,5 +251,5 @@ Trait Mediable
             'size' => $requestFile->getSize(),
             'extension' => $extension,
         ];
-    }    
+    }
 }
